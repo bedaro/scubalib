@@ -146,7 +146,7 @@ public class Mix extends GasSource {
 	 */
 	public static Mix best(int depth, int maxEND, Units units, float maxpO2, boolean oxygenIsNarcotic) {
 		float dpa = units.depthPerAtm();
-		float pAbs = depth / dpa + 1;
+		float pAbs = depth / dpa + 1;	// absolute pressure in bar
 		float fO2Best = maxpO2 / pAbs;
 		if(fO2Best > 1) {
 			fO2Best = 1;
@@ -156,7 +156,7 @@ public class Mix extends GasSource {
 		maxEND = Math.min(depth, maxEND);
 		float pNarc0 = oxygenIsNarcotic? 1: 0.79f;
 		float fNarcBest = (float) (Math.floor((maxEND / dpa + 1) / pAbs * pNarc0 * 100 + 0.0001) / 100);
-		float fHeBest = 1 - (oxygenIsNarcotic? fNarcBest: fNarcBest + fO2Best);
+		float fHeBest = Math.max(1 - (oxygenIsNarcotic? fNarcBest: fNarcBest + fO2Best), 0);
 		if(fO2Best + fHeBest > 1) {
 			return null;
 		} else { 

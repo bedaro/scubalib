@@ -15,8 +15,27 @@ public class Localizer {
 		public String getString(int resource);
 	}
 
-	private static Engine mEngine;
+	private static Engine mEngine = new DummyEngine();
 	
 	public static Engine getEngine() { return mEngine; }
 	public static void setEngine(Engine e) { mEngine = e; }
+
+	// This lets classes work without worrying having to worry about
+	// localization if you don't care
+	private static class DummyEngine implements Engine {
+		public String getString(int resource) {
+			switch(resource) {
+				case STRING_OXYGEN:
+					return "oxygen";
+				case STRING_HELIUM:
+					return "helium";
+				case STRING_NITROGEN:
+					return "nitrogen";
+				case STRING_AIR:
+					return "air";
+				default:
+					return "";
+			}
+		}
+	}
 }
