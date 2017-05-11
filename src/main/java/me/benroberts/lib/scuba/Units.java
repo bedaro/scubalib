@@ -138,7 +138,7 @@ public class Units implements Serializable {
 		return unitSystem == IMPERIAL? PRESSURE_PSI: PRESSURE_BAR;
 	}
 	
-	private static final float pressure_atm[] = { 14.7f, 1 };
+	private static final float pressure_atm[] = { 14.7f, 1.013f };
 	
 	public float pressureAtm() { return pressure_atm[pressureUnit()]; }
 
@@ -220,9 +220,10 @@ public class Units implements Serializable {
 		return abs_temp - rel_to_abs_convert[relTempUnit()];
 	}
 	
-	// Gas constants in imperial (ft^3 psi R^-1 lb-mol^-1), metric (L bar K^-1 mol^-1)
-	// Source: http://en.wikipedia.org/wiki/Ideal_gas_constant
-	private static final float gas_constant[] = { 10.731f, 8.3145E-2f };
+	// Gas constants in imperial (cuft psi R^-1 mol^-1), metric (L bar K^-1 mol^-1)
+	// The imperial measurement is 10.731 cuft psi R^-1 lb-mol^-1 divided
+	// by 453.59 to get rid of the lb-moles.
+	private static final float gas_constant[] = { 2.3658E-2f, 8.3145E-2f };
 	
 	public float gasConstant() { return gas_constant[unitSystem]; }
 	
@@ -254,20 +255,14 @@ public class Units implements Serializable {
 	// (and yes, there are more than two "unit systems" :) )
 	// This needs to be redone to interface with the Unit definitions,
 	// instead of relying on Unit Systems
-	private static float convert(float value, float multiplier_imperial_to_metric, int from_unit, int to_unit) {
-		// Convert to metric as a standard
-		if(from_unit == IMPERIAL) {
-			value /= multiplier_imperial_to_metric;
+	private static float convert(float value, float multiplier_metric_to_imperial, int from_unit, int to_unit) {
+		if(from_unit == to_unit) {
+			return value;
+		} else if(from_unit == IMPERIAL) {
+			return value / multiplier_metric_to_imperial;
+		} else {
+			return value * multiplier_metric_to_imperial;
 		}
-		
-		// Now that we know value is in metric units, convert to
-		// imperial if requested
-		if(to_unit == IMPERIAL) {
-			value *= multiplier_imperial_to_metric;
-		}
-
-		// Whatever we have is now in the correct units. Return it.
-		return value;
 	}
 	
 	public float convertPressure(float pressure, int from_unit) {
@@ -310,4 +305,16 @@ public class Units implements Serializable {
 	public static float convertAbsTemp(float temperature, int from_unit, int to_unit) {
 		return convert(temperature, 1.8f, from_unit, to_unit);
 	}
+
+	// Conversion functions for the van der waals gas constants
+	float convertA(float a, int from_unit) {
+		return convertA(a, from_unit, unitSystem);
+	}
+
+	static float convertA(float a, int from_unit, int to_unit) {
+		// 14.5 * (3.531E-2)^2
+		return convert(a, 1.808E-2f, from_unit, to_unit);
+	}
+
+	// Use convertCapacity for b
 }

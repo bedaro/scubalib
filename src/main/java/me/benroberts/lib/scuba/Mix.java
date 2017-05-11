@@ -13,13 +13,14 @@ public class Mix extends GasSource {
 	// The fraction of helium
 	private double mHe;
 	
-	// The values of Van der Waals' a and b constants for each constituent gas
+	// The values of Van der Waals' a and b constants for each constituent gas, in metric
+	// source: http://www2.ucdsb.on.ca/tiss/stretton/database/van_der_waals_constants.html
 	public static final float A_OXYGEN = 1.382f;
 	public static final float A_HELIUM = 0.0346f;
-	public static final float A_NITROGEN = 1.370f;
+	public static final float A_NITROGEN = 1.37f;
 	public static final float B_OXYGEN = 0.03186f;
-	public static final float B_HELIUM = 0.02380f;
-	public static final float B_NITROGEN = 0.03870f;
+	public static final float B_HELIUM = 0.0238f;
+	public static final float B_NITROGEN = 0.0387f;
 
 	// Constructor. Takes fractions of oxygen and helium (between 0 and 1)
 	public Mix(double o2, double he) {
@@ -141,7 +142,7 @@ public class Mix extends GasSource {
 	 * @param depth The maximum desired depth for this mix in the current system of units
 	 * @param maxEND The desired END. If you don't want a helium mix, pass the same value for mod and end.
 	 * @param maxpO2 The maximum desired partial pressure of oxygen (usually 1.4 or 1.6)
-	 * @param oxygenIsNarcotic Whether or not to consider the effects of oxygen in the calculation
+	 * @param oxygenIsNarcotic Whether or not to consider the narcotic effects of oxygen in the calculation
 	 * @return The Mix containing the highest possible percentage of oxygen and the lowest possible percentage of helium for the given parameters, rounded down/up to whole percentages.
 	 */
 	public static Mix best(int depth, int maxEND, Units units, float maxpO2, boolean oxygenIsNarcotic) {
@@ -165,36 +166,42 @@ public class Mix extends GasSource {
 	}
 	
 	// Internal variables used for caching the computed a and b values for this mix
-	private double mCacheA = 0, mCacheB = 0, mCacheHe = -1, mCacheO2 = -1;
+	private float mCacheA = 0, mCacheB = 0;
+	private double mCacheHe = -1, mCacheO2 = -1;
 	
-	/**
-	 * This private method does our a and b calculations and caches the results in
-	 * private variables. This way the computation only has to be done once on a given
-	 * mix.
-	 */
+	// This private method does our a and b calculations and caches the results in
+	// private variables. This way the computation only has to be done once on a given
+	// mix.
+	// See Kwak and Mansoori, 1985 http://trl.lab.uic.edu/KwakvdwMRs.pdf
 	private void computeAB() {
 		mCacheO2 = mO2;
 		mCacheHe = mHe;
 		double x[] = { mO2, getfN2(), mHe };
 		float a[] = { A_OXYGEN, A_NITROGEN, A_HELIUM };
 		float b[] = { B_OXYGEN, B_NITROGEN, B_HELIUM };
+		double aij, bij;
 		mCacheA = 0;
 		mCacheB = 0;
 		for(int i = 0; i < 3; i++) {
 			for(int j = 0; j < 3; j++) {
-				mCacheA += (float)(Math.sqrt(a[i]*a[j])*x[i]*x[j]);
-				mCacheB += (float)(Math.sqrt(b[i]*b[j])*x[i]*x[j]);
+				// Eq 4 from Kwak and Mansoori, zero coupling parameter
+				aij = Math.sqrt(a[i] * a[j]);
+				mCacheA += Double.valueOf(aij * x[i] * x[j]).floatValue();
 			}
+			// Eq 3.1 from Kwak and Mansoori. As much as I'd like
+			// to use their results, it would require coupling
+			// parameters which vary depending on the gas and
+			// would not work for trivial cases like pure O2.
+			mCacheB += Double.valueOf(b[i] * x[i]).floatValue();
 		}
 	}
 	
 	/**
-	 * Returns the particle attraction factor a for a theoretical homogeneous
-	 * gas equivalent in behavior to the given gas mixture.
-	 * @param m The gas mix to generate a for.
-	 * @return The value of a.
+	 * Returns the particle attraction factor a for a theoretical
+	 * homogeneous gas equivalent in behavior to the given gas mixture.
+	 * @return The value of a, in bar L^2 / mol^2.
 	 */
-	public double getA() {
+	public float getA() {
 		if(mO2 != mCacheO2 || mHe != mCacheHe) {
 			computeAB();
 		}
@@ -204,10 +211,9 @@ public class Mix extends GasSource {
 	/**
 	 * Returns the particle volume factor b for a theoretical homogeneous
 	 * gas equivalent in behavior to the given gas mixture.
-	 * @param m The gas mix to generate b for.
-	 * @return The value of b.
+	 * @return The value of b, in L / mol.
 	 */
-	public double getB() {
+	public float getB() {
 		if(mO2 != mCacheO2 || mHe != mCacheHe) {
 			computeAB();
 		}

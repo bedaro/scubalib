@@ -53,6 +53,10 @@ public class GasSupply implements Cloneable {
 		useIdealGasLaws(true);
 	}
 
+	public boolean getUseIdealGasLaws() {
+		return mUseIdealGasLaws;
+	}
+
 	public void useIdealGasLaws(boolean set) {
 		mUseIdealGasLaws = set;
 	}
@@ -81,11 +85,11 @@ public class GasSupply implements Cloneable {
 		mPressure = p;
 	}
 
-	public double getTemperature() {
+	public float getTemperature() {
 		return mTemperature;
 	}
 
-	public void setTemperature(int t) {
+	public void setTemperature(float t) {
 		mTemperature = t;
 	}
 
@@ -135,15 +139,39 @@ public class GasSupply implements Cloneable {
 	 * @return The GasSupply object
 	 */
 	public GasSupply drainToO2Amount(double amt) {
+		// A catch for the trivial solution; we're already there
+		// (this is most important if amt is 0 and so is the amount in
+		// the supply currently)
+		if(amt - getO2Amount() >= -0.0001) {
+			return this;
+		}
 		return drainToGasAmount(amt / mMix.getfO2());
 	}
 
+	/**
+	 * Adjust the pressure in the supply so there's the given amount of nitrogen.
+	 * @param amt The amount of nitrogen to leave in the cylinder in capacity
+	 * units at sea level pressure
+	 * @return The GasSupply object
+	 */
 	public GasSupply drainToN2Amount(double amt) {
-		return drainToGasAmount(amt / mMix.getfHe());
+		if(amt - getN2Amount() >= -0.0001) {
+			return this;
+		}
+		return drainToGasAmount(amt / mMix.getfN2());
 	}
 
+	/**
+	 * Adjust the pressure in the supply so there's the given amount of helium.
+	 * @param amt The amount of helium to leave in the cylinder in capacity
+	 * units at sea level pressure
+	 * @return The GasSupply object
+	 */
 	public GasSupply drainToHeAmount(double amt) {
-		return drainToGasAmount(amt / mMix.getfN2());
+		if(amt - getHeAmount() >= -0.0001) {
+			return this;
+		}
+		return drainToGasAmount(amt / mMix.getfHe());
 	}
 
 	/**

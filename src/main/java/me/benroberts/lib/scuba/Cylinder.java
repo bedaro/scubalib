@@ -12,6 +12,9 @@ public class Cylinder implements Serializable {
 
 	private static final long serialVersionUID = 1L;
 
+	// Private vars that tweak the Van der Waals calculations
+	private static final Mix AIR = new Mix(0.21f, 0);
+
 	private Long id;
 
 	// The total physical volume of the cylinder(s)
@@ -37,6 +40,7 @@ public class Cylinder implements Serializable {
 	private Integer hydroIntervalYears, visualIntervalMonths;
 	
 	private static int defHydroIntervalYears = 5, defVisualIntervalMonths = 12;
+	private static Date testDate = null;
 
 	private Units mUnits;
 
@@ -93,7 +97,7 @@ public class Cylinder implements Serializable {
 	 * capacity units
 	 */
 	public float getVdwCapacity() {
-		return (float)getVdwCapacityAtPressure(mServicePressure, new Mix(0.21f, 0));
+		return (float)getVdwCapacityAtPressure(mServicePressure, AIR);
 	}
 
 	public float getIdealCapacity() {
@@ -106,37 +110,19 @@ public class Cylinder implements Serializable {
 	}
 
 	public Cylinder setVdwCapacity(float capacity) {
-		// This is quite similar to getVdwCapacityAtPressure, except
-		// we are solving for V instead of n. The cubic
-		// polynomial is the same, it's just that the
-		// uncertainty is calculated differently.
-		Mix m = new Mix(0.21f, 0);
-		double a = m.getA(), b = m.getB();
-		// TODO: at what temperature do the cylinder manufacturers determine
-		// tank capacity?
-		double RT = mUnits.absTempAmbient() * mUnits.gasConstant();
-		// A bit of optimization to reduce number of calculations per iteration
-		double PbRT = mServicePressure*b + RT, PbRT2 = 2 * PbRT, ab = a * b, P3 = 3 * mServicePressure;
-		// Come up with a guess to seed Newton-Raphson. The equation is easily
-		// solved if a and b were 0
-		double v0, v1 = RT / mServicePressure;
-		
+		// TODO: at what temperature do the cylinder manufacturers
+		// determine tank capacity?
+
+		double RT = mUnits.absTempAbient() * mUnits.gasConstant();
 		// We know what n is because we were given capacity:
 		double n = mUnits.pressureAtm() * capacity / RT;
-		
+
 		// Uncertainty math (see below)
 		// V = nv
 		// dV/dv = n
-		float uncertainty = (float)(n / Math.pow(10, mUnits.volumePrecision()) / 2f);
-		
-		do {
-			v0 = v1;
-			double f = mServicePressure * Math.pow(v0, 3) - PbRT * Math.pow(v0, 2) + a * v0 - ab;
-			double fprime = P3 * Math.pow(v0, 2) - PbRT2 * v0 + a;
-			v1 = v0 - f / fprime;
-		} while(Math.abs(v0 - v1) >= uncertainty);
-
-		mInternalVolume = (float)(v1 * n);
+		float uncertainty = new Float(0.1 / n).floatValue();
+		double v = vRoot(mServicePressure, AIR, mUnits.absTempAmbient(), uncertainty);
+		mInternalVolume = (float)(v * n);
 		return this;
 	}
 
@@ -199,12 +185,12 @@ public class Cylinder implements Serializable {
 	}
 
 	public double getIdealPressureAtCapacity(double capacity) {
-		return capacity * mUnits.pressureAtm() / (double)mInternalVolume;
+		return capacity * mUnits.pressureAtm() / mInternalVolume;
 	}
 
 	/**
 	 * Solves Van der Waals gas equation to get equivalent atmospheric volume at
-	 * a given pressure
+	 * a given pressure and ambient temperature
 	 * @param P The pressure of the gas in the cylinder
 	 * @param mix The mix in the cylinder, needed to determine a and b constants.
 	 * @return The amount of gas in the cylinder to one decimal place
@@ -213,54 +199,73 @@ public class Cylinder implements Serializable {
 		return getVdwCapacityAtPressure(P, m, mUnits.absTempAmbient());
 	}
 
-	public double getVdwCapacityAtPressure(double P, Mix m, float T) {
+	/**
+	 * Solves Van der Waals gas equation to get equivalent atmospheric volume at
+	 * a given pressure and temperature
+	 * @param P The pressure of the gas in the cylinder
+	 * @param mix The mix in the cylinder, needed to determine a and b constants.
+	 * @param T The absolute temperature
+	 * @return The amount of gas in the cylinder to one decimal place
+	 */
+	public double getVdwCapacityAtPressure(double P, Mix mix, float T) {
 		// First, the trivial solution. This will cause a divide by 0 if we try to
 		// solve.
 		if(P == 0) {
 			return 0;
 		}
-		// This is solved by finding the root of a cubic polynomial for the molar
-		// volume v = V/n:
-		// choose a reasonable value for T
-		//   P * v^3 - (P*b + R*T) * v^2 + a * v - a * b = 0
-		//   n = V/v
-		// Then we can use ideal gas laws to convert n to V @ 1 ata
-		double a = m.getA(), b = m.getB();
-		double RT = T * mUnits.gasConstant();
-		// A bit of optimization to reduce number of calculations per iteration
-		double PbRT = P*b + RT, PbRT2 = 2 * PbRT, ab = a * b, P3 = 3 * P;
-		// Come up with a guess to seed Newton-Raphson. The equation is easily
-		// solved if a and b were 0 (ideal)
-		double v0, v1 = RT / P;
-
-		// First-order uncertainty propagation. This lets us know within what
-		// tolerance we need to compute v to get the right volume.
+		// First-order uncertainty propagation. This lets us know
+		// within what tolerance we need to compute v to get the right
+		// volume.
 		// The variable we are solving for is v.
-		// The result we care about the uncertainty for is V0, the volume at 1 ata.
-		//   V0 = n * R * T / P0 [ideal gas law] = V * R * T / (P0 * v)
-		// To compute the uncertainty in V0, we use the Taylor series method for
-		// v alone.
-		//   deltaV0 = dV0/dv*deltav
-		// ...where dV0/dv = - V*R*T / (P0 * v^2)
-		// We want to make sure deltaV0 is less than 0.05, so...
-		//   deltav < P0 * v^2 / (20 * V * R * T)
-		double uncertainty_multiplier = mUnits.pressureAtm() / (20 * mInternalVolume * RT);
+		// The result we care about the uncertainty for is V_a, the
+		// volume at 1 ata.
+		//   V_a = n * R * T / P_a [ideal gas law] = V * R * T / (P_a * v)
+		// To compute the uncertainty in V0, we use the Taylor series
+		// method for v alone.
+		//   deltaV_a = dV_a/dv*deltav
+		// ...where dV_a/dv = - V * R * T / (P_a * v^2)
+		// We want to make sure deltaV_a is less than 0.05, so...
+		//   deltav < P_a * v^2 / (20 * V * R * T)
+		// Our best guess for v is from ideal gas law, which will be
+		// close enough for estimating uncertainty.
+		// v0 = RT / P
+		// so deltav < P_a * R * T / (20 * P^2 * V)
+		float RT = mUnits.gasConstant() * T,
+		      uncertainty = new Float(mUnits.pressureAtm() * RT / (20 * P * P * mInternalVolume)).floatValue();
+		double v = vRoot(P, mix, T, uncertainty);
+		return mInternalVolume * RT / (mUnits.pressureAtm() * v);
+	}
 
+	// Finds the root of a cubic polynomial for the molar volume v = V/n:
+	// choose a reasonable value for T
+	//   P * v^3 - (P*b + R*T) * v^2 + a * v - a * b = 0
+	//   n = V/v
+	// Once v is known, 1-ata capacities can be computed accurately
+	// enough with the ideal gas law.
+	private double vRoot(double P, Mix mix, float T, float uncertainty) {
+		double a = mUnits.convertA(mix.getA(), Units.METRIC),
+		       b = mUnits.convertCapacity(mix.getB(), Units.METRIC),
+		       RT = T * mUnits.gasConstant();
+		// A bit of optimization to reduce number of calculations per
+		// iteration
+		double PbRT = P*b + RT, PbRT2 = 2 * PbRT, ab = a * b, P3 = 3 * P;
+		// Come up with a guess to seed Newton-Raphson. The equation is
+		// easily solved if a and b were 0 (ideal)
+		double v0, v1 = RT / P, range = -1, last_f;
 		do {
 			v0 = v1;
-			double f = P * Math.pow(v0, 3) - PbRT * Math.pow(v0, 2) + a * v0 - ab;
-			double fprime = P3 * Math.pow(v0, 2) - PbRT2 * v0 + a;
+			double f = P * Math.pow(v0, 3) - PbRT * Math.pow(v0, 2) + a * v0 - ab,
+			       fprime = P3 * Math.pow(v0, 2) - PbRT2 * v0 + a;
 			v1 = v0 - f / fprime;
-		} while(Math.abs(v0 - v1) / uncertainty_multiplier >= v1 * v1);
-
-		return mInternalVolume * RT / (mUnits.pressureAtm() * v1);
+		} while(Math.abs(v0 - v1) / v1 >= uncertainty);
+		return v1;
 	}
 
-	public double getVdwPressureAtCapacity(double capacity, Mix m) {
-		return getVdwPressureAtCapacity(capacity, m, mUnits.absTempAmbient());
+	public double getVdwPressureAtCapacity(double capacity, Mix mix) {
+		return getVdwPressureAtCapacity(capacity, mix, mUnits.absTempAmbient());
 	}
 
-	public double getVdwPressureAtCapacity(double capacity, Mix m, float T) {
+	public double getVdwPressureAtCapacity(double capacity, Mix mix, float T) {
 		// This is given by the following:
 		// choose a reasonable value for T
 		// n = Patm*V/(R*T) (since volume is at atmospheric pressure, it's close enough to ideal)
@@ -268,7 +273,7 @@ public class Cylinder implements Serializable {
 		// P = R * T / (v - b) - a / v^2
 		double RT = T * mUnits.gasConstant();
 		double v = mInternalVolume * RT / (mUnits.pressureAtm() * capacity),
-				a = m.getA(), b = m.getB();
+				a = mUnits.convertA(mix.getA(), Units.METRIC), b = mUnits.convertCapacity(mix.getB(), Units.METRIC);
 		return RT / (v - b) - a / (v * v);
 	}
 
@@ -296,6 +301,36 @@ public class Cylinder implements Serializable {
 		return visualIntervalMonths;
 	}
 
+	// For testing, makes the expiration methods pretend the Date is
+	// date rather than the current time.
+	public static void setTestDate(Date date) {
+		testDate = date;
+	}
+
+	private Date now() {
+		return (testDate == null)? new Date(): testDate;
+	}
+
+	private void makeEndOfMonth(Calendar cal) {
+		cal.set(Calendar.DAY_OF_MONTH, cal.getActualMaximum(Calendar.DAY_OF_MONTH));
+		cal.set(Calendar.HOUR_OF_DAY, cal.getActualMaximum(Calendar.HOUR_OF_DAY));
+		cal.set(Calendar.MINUTE, cal.getActualMaximum(Calendar.MINUTE));
+		cal.set(Calendar.SECOND, cal.getActualMaximum(Calendar.SECOND));
+	}
+
+	private void makeStartOfMonth(Calendar cal) {
+		cal.set(Calendar.DAY_OF_MONTH, cal.getActualMinimum(Calendar.DAY_OF_MONTH));
+		cal.set(Calendar.HOUR_OF_DAY, cal.getActualMinimum(Calendar.HOUR_OF_DAY));
+		cal.set(Calendar.MINUTE, cal.getActualMinimum(Calendar.MINUTE));
+		cal.set(Calendar.SECOND, cal.getActualMinimum(Calendar.SECOND));
+	}
+
+	private Calendar getOneMonthLater(Calendar cal) {
+		Calendar l = (Calendar)cal.clone();
+		l.add(Calendar.MONTH, 1);
+		return l;
+	}
+
 	public boolean isHydroExpired() {
 		if(lastHydro == null) {
 			return false;
@@ -303,11 +338,8 @@ public class Cylinder implements Serializable {
 		Calendar cal = Calendar.getInstance();
 		cal.setTime(lastHydro);
 		cal.add(Calendar.YEAR, hydroIntervalYears != null? hydroIntervalYears: defHydroIntervalYears);
-		cal.set(Calendar.DAY_OF_MONTH, cal.getActualMaximum(Calendar.DAY_OF_MONTH));
-		cal.set(Calendar.HOUR_OF_DAY, cal.getActualMaximum(Calendar.HOUR_OF_DAY));
-		cal.set(Calendar.MINUTE, cal.getActualMaximum(Calendar.MINUTE));
-		cal.set(Calendar.SECOND, cal.getActualMaximum(Calendar.SECOND));
-		return new Date().after(cal.getTime());
+		makeEndOfMonth(cal);
+		return now().after(cal.getTime());
 	}
 
 	public boolean isVisualExpired() {
@@ -317,30 +349,40 @@ public class Cylinder implements Serializable {
 		Calendar cal = Calendar.getInstance();
 		cal.setTime(lastVisual);
 		cal.add(Calendar.MONTH, visualIntervalMonths != null? visualIntervalMonths: defVisualIntervalMonths);
-		cal.set(Calendar.DAY_OF_MONTH, cal.getActualMaximum(Calendar.DAY_OF_MONTH));
-		cal.set(Calendar.HOUR_OF_DAY, cal.getActualMaximum(Calendar.HOUR_OF_DAY));
-		cal.set(Calendar.MINUTE, cal.getActualMaximum(Calendar.MINUTE));
-		cal.set(Calendar.SECOND, cal.getActualMaximum(Calendar.SECOND));
-		return new Date().after(cal.getTime());
+		makeEndOfMonth(cal);
+		return now().after(cal.getTime());
 	}
 
 	public boolean doesHydroExpireThisMonth() {
 		if(lastHydro == null) {
 			return false;
 		}
-		Calendar cal = Calendar.getInstance();
-		cal.setTime(lastHydro);
-		cal.add(Calendar.YEAR, hydroIntervalYears != null? hydroIntervalYears: defHydroIntervalYears);
-		return new Date().after(cal.getTime());
+		// lastMonth == the start of the last valid month of the
+		// test.
+		// firstExpiredMonth == the start of the first month that
+		// the test would be considered expired (one month after
+		// lastMonth)
+		Calendar lastMonth = Calendar.getInstance(),
+			 firstExpiredMonth;
+		Date now = now();
+		lastMonth.setTime(lastHydro);
+		lastMonth.add(Calendar.YEAR, hydroIntervalYears != null? hydroIntervalYears: defHydroIntervalYears);
+		makeStartOfMonth(lastMonth);
+		firstExpiredMonth = getOneMonthLater(lastMonth);
+		return now.after(lastMonth.getTime()) && now.before(firstExpiredMonth.getTime());
 	}
 
 	public boolean doesVisualExpireThisMonth() {
 		if(lastVisual == null) {
 			return false;
 		}
-		Calendar cal = Calendar.getInstance();
-		cal.setTime(lastVisual);
-		cal.add(Calendar.MONTH, visualIntervalMonths != null? visualIntervalMonths: defVisualIntervalMonths);
-		return new Date().after(cal.getTime());
+		Calendar lastMonth = Calendar.getInstance(),
+			 firstExpiredMonth;
+		Date now = now();
+		lastMonth.setTime(lastVisual);
+		lastMonth.add(Calendar.MONTH, visualIntervalMonths != null? visualIntervalMonths: defVisualIntervalMonths);
+		makeStartOfMonth(lastMonth);
+		firstExpiredMonth = getOneMonthLater(lastMonth);
+		return now.after(lastMonth.getTime()) && now.before(firstExpiredMonth.getTime());
 	}
 }

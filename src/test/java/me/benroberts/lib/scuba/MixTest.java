@@ -89,5 +89,14 @@ public class MixTest {
 		m.setfHe(1);
 		assertEquals(m.getA(), Mix.A_HELIUM, tolerance);
 		assertEquals(m.getB(), Mix.B_HELIUM, tolerance);
+
+		// Because I could not find reliable published values for
+		// a and b equivalents for trimixes, these results were
+		// computed independently with the spreadsheet in doc/
+		// They also match results at
+		// http://www.nigelhewitt.co.uk/diving/maths/vdw.html
+		Mix air = new Mix(0.21f, 0);
+		assertEquals(air.getA(), 1.373, 0.001);
+		assertEquals(air.getB(), 0.03727, 0.00001);
 	}
 }
