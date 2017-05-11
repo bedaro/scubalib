@@ -11,7 +11,7 @@ public class MixTest {
 	private static double tolerance = 0.000001;
 
 	@Test
-	public void constructorGettersSetters() {
+	public void constructorGetters() {
 		Mix m = new Mix(0.21f, 0.35f);
 		assertEquals(m.getO2(), 21, tolerance);
 		assertEquals(m.getHe(), 35, tolerance);
@@ -19,43 +19,58 @@ public class MixTest {
 		assertEquals(m.getfHe(), 0.35f, tolerance);
 		assertEquals(m.getfN2(), 0.44f, tolerance);
 
-		m.setfO2(0.18f);
-		m.setfHe(0.4f);
-		assertEquals(m.getfO2(), 0.18f, tolerance);
-		assertEquals(m.getfHe(), 0.4f, tolerance);
+		// Error cases
+		try {
+			m = new Mix(0.51f, 0.51f);
+			fail("Constructor accepted >100% gas sum");
+		} catch(Mix.MixException e) {
+		}
 
-		// Make sure something strange isn't happening with 0% He
-		m.setfHe(0);
-		assertEquals(m.getfHe(), 0, tolerance);
+		try {
+			m = new Mix(1.2f, 0);
+			fail("Constructor accepted >100% O2");
+		} catch(Mix.MixException e) {
+		}
+
+		try {
+			m = new Mix(-0.5f, 0.2f);
+			fail("Constructor accepted negative O2");
+		} catch(Mix.MixException e) {
+		}
+	}
+
+	@Test
+	public void testEquals() {
+		Mix m = Mix.AIR, m2 = new Mix(0.21f, 0);
+		assertFalse(m.equals(Mix.HELIUM));
+		assertTrue(m.equals(m2));
 	}
 
 	@Test
 	public void stringsWork() {
 		Localizer.Engine e = Localizer.getEngine();
 		// Air
-		Mix m = new Mix(0.21f, 0);
+		Mix m = Mix.AIR;
 		assertEquals(m.toString(), e.getString(Localizer.STRING_AIR));
 
 		// Pure oxygen
-		m.setfO2(1);
+		m = Mix.OXYGEN;
 		assertEquals(m.toString(), e.getString(Localizer.STRING_OXYGEN));
 
 		// Pure helium
-		m.setfO2(0);
-		m.setfHe(1);
+		m = Mix.HELIUM;
 		assertEquals(m.toString(), e.getString(Localizer.STRING_HELIUM));
 
 		// Pure nitrogen
-		m.setfHe(0);
+		m = new Mix(0, 0);
 		assertEquals(m.toString(), e.getString(Localizer.STRING_NITROGEN));
 
 		// Nitrox
-		m.setfO2(0.32f);
+		m = new Mix(0.32f, 0);
 		assertEquals(m.toString(), "32%");
 
 		// Trimix
-		m.setfO2(0.1f);
-		m.setfHe(0.5f);
+		m = new Mix(0.1f, 0.5f);
 		assertEquals(m.toString(), "10/50");
 	}
 
@@ -82,11 +97,10 @@ public class MixTest {
 	@Test
 	public void computesAB() {
 		// Simple cases, which also test cache expiration
-		Mix m = new Mix(1, 0);
+		Mix m = Mix.OXYGEN;
 		assertEquals(m.getA(), Mix.A_OXYGEN, tolerance);
 		assertEquals(m.getB(), Mix.B_OXYGEN, tolerance);
-		m.setfO2(0);
-		m.setfHe(1);
+		m = Mix.HELIUM;
 		assertEquals(m.getA(), Mix.A_HELIUM, tolerance);
 		assertEquals(m.getB(), Mix.B_HELIUM, tolerance);
 
@@ -95,8 +109,8 @@ public class MixTest {
 		// computed independently with the spreadsheet in doc/
 		// They also match results at
 		// http://www.nigelhewitt.co.uk/diving/maths/vdw.html
-		Mix air = new Mix(0.21f, 0);
-		assertEquals(air.getA(), 1.373, 0.001);
-		assertEquals(air.getB(), 0.03727, 0.00001);
+		m = Mix.AIR;
+		assertEquals(m.getA(), 1.373, 0.001);
+		assertEquals(m.getB(), 0.03727, 0.00001);
 	}
 }

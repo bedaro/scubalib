@@ -3,7 +3,8 @@ package me.benroberts.lib.scuba;
 import java.text.NumberFormat;
 
 /**
- * This is a class for a given gas mix of oxygen, nitrogen, and helium
+ * This is a class for a given gas mixture of oxygen, nitrogen, and helium.
+ * Mix objects are immutable.
  * @author Ben Roberts (ben@benroberts.me)
  */
 public class Mix extends GasSource {
@@ -13,21 +14,80 @@ public class Mix extends GasSource {
 	// The fraction of helium
 	private double mHe;
 	
-	// The values of Van der Waals' a and b constants for each constituent gas, in metric
-	// source: http://www2.ucdsb.on.ca/tiss/stretton/database/van_der_waals_constants.html
+	/**
+	 * A Mix that represents Earth's surface atmosphere to an acceptable
+	 * approximation.
+	 */
+	public static final Mix AIR = new Mix(0.21f, 0);
+
+	/**
+	 * A Mix that represents pure oxygen.
+	 */
+	public static final Mix OXYGEN = new Mix(1, 0);
+
+	/**
+	 * A Mix that represents pure helium.
+	 */
+	public static final Mix HELIUM = new Mix(0, 1);
+
+	/**
+	 * The value of Van der Waals' particle attraction factor <i>a</i> for
+	 * molecular oxygen.
+	 * Value is in metric (L^2 bar / mol^2) units.
+	 * @see <a href="http://www2.ucdsb.on.ca/tiss/stretton/database/van_der_waals_constants.html">Van der Waals Constants</a>
+	 */
 	public static final float A_OXYGEN = 1.382f;
+	/**
+	 * The value of Van der Waals' particle attraction factor <i>a</i> for
+	 * helium.
+	 * Value is in metric (L^2 bar / mol^2) units.
+	 * @see <a href="http://www2.ucdsb.on.ca/tiss/stretton/database/van_der_waals_constants.html">Van der Waals Constants</a>
+	 */
 	public static final float A_HELIUM = 0.0346f;
+	/**
+	 * The value of Van der Waals' particle attraction factor <i>a</i> for
+	 * molecular nitrogen.
+	 * Value is in metric (L^2 bar / mol^2) units.
+	 * @see <a href="http://www2.ucdsb.on.ca/tiss/stretton/database/van_der_waals_constants.html">Van der Waals Constants</a>
+	 */
 	public static final float A_NITROGEN = 1.37f;
+	/**
+	 * The value of Van der Waals' particle volume factor <i>b</i> for
+	 * molecular oxygen.
+	 * Value is in metric (L / mol) units.
+	 * @see <a href="http://www2.ucdsb.on.ca/tiss/stretton/database/van_der_waals_constants.html">Van der Waals Constants</a>
+	 */
 	public static final float B_OXYGEN = 0.03186f;
+	/**
+	 * The value of Van der Waals' particle volume factor <i>b</i> for
+	 * helium.
+	 * Value is in metric (L / mol) units.
+	 * @see <a href="http://www2.ucdsb.on.ca/tiss/stretton/database/van_der_waals_constants.html">Van der Waals Constants</a>
+	 */
 	public static final float B_HELIUM = 0.0238f;
+	/**
+	 * The value of Van der Waals' particle volume factor <i>b</i> for
+	 * molecular nitrogen.
+	 * Value is in metric (L / mol) units.
+	 * @see <a href="http://www2.ucdsb.on.ca/tiss/stretton/database/van_der_waals_constants.html">Van der Waals Constants</a>
+	 */
 	public static final float B_NITROGEN = 0.0387f;
 
-	// Constructor. Takes fractions of oxygen and helium (between 0 and 1)
+	/**
+	 * Create a gas mix of the given fractions of oxygen and helium.
+	 * <p>
+	 * Passing arguments that would produce an impossible gas will result
+	 * in a MixException.
+	 * @param o2 The fraction of oxygen
+	 * @param he The fraction of helium
+	 */
 	public Mix(double o2, double he) {
-		reset(o2, he);
-	}
-	
-	public void reset(double o2, double he) {
+		if(o2 < 0 || he < 0) {
+			throw new MixException("A Mix cannot contain negative percentages of gases");
+		}
+		if(o2 + he > 1) {
+			throw new MixException("A Mix cannot contain more than 100% oxygen and helium");
+		}
 		mO2 = o2;
 		mHe = he;
 	}
@@ -47,15 +107,7 @@ public class Mix extends GasSource {
 	public double getfO2() {
 		return mO2;
 	}
-	
-	public void setfO2(double fo2) {
-		mO2 = fo2;
-	}
-	
-	public void setfHe(double fhe) {
-		mHe = fhe;
-	}
-	
+
 	/**
 	 * Get the percentage of helium in the mix, from 0 to 100.
 	 * @return The helium %
@@ -78,6 +130,19 @@ public class Mix extends GasSource {
 	 */
 	public double getfN2() {
 		return 1 - mHe - mO2;
+	}
+
+	@Override
+	public boolean equals(Object o2) {
+		if(super.equals(o2)) {
+			return true;
+		}
+		if(! (o2 instanceof Mix)) {
+			return false;
+		}
+		Mix m2 = (Mix)o2;
+		return Math.abs(getfO2() - m2.getfO2()) < 0.0005 &&
+			Math.abs(getfHe() - m2.getfHe()) < 0.0005;
 	}
 
 	@Override
@@ -126,9 +191,12 @@ public class Mix extends GasSource {
 	}
 	
 	/**
-	 * Return the minimum depth at which this mix may be breathed.
-	 * @param minpO2 The minimum desired pO2 to have when breathing this mix (usually .16 or .17)
-	 * @return The minimum depth in the current system of units, rounded up to the nearest standard increment
+	 * Get the minimum depth at which this mix may be breathed.
+	 * @param minpO2 The minimum desired pO2 to have when breathing this
+	 * mix, in ata (usually .16 or .17)
+	 * @param units A {@link Units} object set to the desired measurement
+	 * system for the result
+	 * @return The minimum depth in the given units, rounded up to the nearest standard increment
 	 */
 	public float ceiling(float minpO2, Units units) {
 		// This function is nearly identical to MOD except we round up instead of
@@ -137,17 +205,26 @@ public class Mix extends GasSource {
 	}
 	
 	/**
-	 * Determine the best mix to use for a given depth based on the desired MOD and
-	 * END at that MOD.
-	 * @param depth The maximum desired depth for this mix in the current system of units
-	 * @param maxEND The desired END. If you don't want a helium mix, pass the same value for mod and end.
-	 * @param maxpO2 The maximum desired partial pressure of oxygen (usually 1.4 or 1.6)
-	 * @param oxygenIsNarcotic Whether or not to consider the narcotic effects of oxygen in the calculation
-	 * @return The Mix containing the highest possible percentage of oxygen and the lowest possible percentage of helium for the given parameters, rounded down/up to whole percentages.
+	 * Determine the best mix to use for a given depth based on the desired
+	 * MOD and END at that MOD.
+	 * @param depth The maximum desired depth for this mix in the current
+	 * system of units
+	 * @param maxEND The desired END. If you don't want a helium mix, pass
+	 * the same value for mod and end.
+	 * @param units A {@link Units} object set to the desired measurement
+	 * system for the result
+	 * @param maxpO2 The maximum desired partial pressure of oxygen in ata
+	 * (usually 1.4 or 1.6)
+	 * @param oxygenIsNarcotic Whether or not to consider the narcotic
+	 * effects of oxygen in the calculation
+	 * @return The Mix containing the highest possible percentage of
+	 * oxygen and the lowest possible percentage of helium for the given
+	 * parameters, rounded down/up to whole percentages. Returns null if
+	 * it is impossible to satisfy the given requirements.
 	 */
 	public static Mix best(int depth, int maxEND, Units units, float maxpO2, boolean oxygenIsNarcotic) {
 		float dpa = units.depthPerAtm();
-		float pAbs = depth / dpa + 1;	// absolute pressure in bar
+		float pAbs = depth / dpa + 1;	// absolute pressure in ata
 		float fO2Best = maxpO2 / pAbs;
 		if(fO2Best > 1) {
 			fO2Best = 1;
@@ -158,20 +235,21 @@ public class Mix extends GasSource {
 		float pNarc0 = oxygenIsNarcotic? 1: 0.79f;
 		float fNarcBest = (float) (Math.floor((maxEND / dpa + 1) / pAbs * pNarc0 * 100 + 0.0001) / 100);
 		float fHeBest = Math.max(1 - (oxygenIsNarcotic? fNarcBest: fNarcBest + fO2Best), 0);
-		if(fO2Best + fHeBest > 1) {
-			return null;
-		} else { 
+		try {
 			return new Mix(fO2Best, fHeBest);
+		} catch(MixException e) {
+			return null;
 		}
 	}
 	
-	// Internal variables used for caching the computed a and b values for this mix
+	// Internal variables used for caching the computed a and b values for
+	// this mix
 	private float mCacheA = 0, mCacheB = 0;
 	private double mCacheHe = -1, mCacheO2 = -1;
 	
-	// This private method does our a and b calculations and caches the results in
-	// private variables. This way the computation only has to be done once on a given
-	// mix.
+	// This private method does our a and b calculations and caches the
+	// results in private variables. This way the computation only has to
+	// be done once on a given mix.
 	// See Kwak and Mansoori, 1985 http://trl.lab.uic.edu/KwakvdwMRs.pdf
 	private void computeAB() {
 		mCacheO2 = mO2;
@@ -218,5 +296,15 @@ public class Mix extends GasSource {
 			computeAB();
 		}
 		return mCacheB;
+	}
+
+	/**
+	 * Thrown when a Mix is instantiated or modified in an impossible way
+	 */
+	public class MixException extends RuntimeException {
+
+		public MixException(String message) {
+			super(message);
+		}
 	}
 }

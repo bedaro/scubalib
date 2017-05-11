@@ -12,17 +12,15 @@ public class Cylinder implements Serializable {
 
 	private static final long serialVersionUID = 1L;
 
-	// Private vars that tweak the Van der Waals calculations
-	private static final Mix AIR = new Mix(0.21f, 0);
-
 	private Long id;
 
 	// The total physical volume of the cylinder(s)
-	// Internal volume is stored in standard "capacity units" for the defined
-	// unit system. Some unit systems (i.e. Imperial) have special units that
-	// are typically used for measuring internal volumes because capacity units
-	// are too large to be convenient. It is up to the frontend to convert
-	// capacity units returned by this class if it is desired to do so.
+	// Internal volume is stored in standard "capacity units" for the
+	// defined unit system. Some unit systems (i.e. Imperial) have special
+	// units that are typically used for measuring internal volumes because
+	// capacity units are too large to be convenient. It is up to the
+	// frontend to convert capacity units returned by this class if it is
+	// desired to do so.
 	private float mInternalVolume;
 	// The service pressure
 	private int mServicePressure;
@@ -32,8 +30,20 @@ public class Cylinder implements Serializable {
 	private int type = 0;
 
 	private String serialNumber;
-	
+
+	/**
+	 * A constant for classifying a Cylinder object as "generic," meaning
+	 * that it represents a class of cylinders rather than a specific
+	 * physical one.
+	 * @see setType
+	 */
 	public static final int TYPE_GENERIC = 0;
+	/**
+	 * A constant for classifying a Cylinder object as "specific," meaning
+	 * that it is a specific physical cylinder with unique characteristics
+	 * like a serial number and inspection dates.
+	 * @see setType
+	 */
 	public static final int TYPE_SPECIFIC = 1;
 	
 	private Date lastHydro, lastVisual;
@@ -45,8 +55,10 @@ public class Cylinder implements Serializable {
 	private Units mUnits;
 
 	/**
-	 * Constructor is meant to take values as returned from a tank data model
-	 * which stores internal volumes and service pressures (the metric way).
+	 * Create a Cylinder with the given unit system, internal volume, and
+	 * service pressure. The constructor is meant to take values as
+	 * returned from a tank data model which stores internal volumes and
+	 * service pressures (the metric way).
 	 *
 	 * @param internal_volume Internal volume of the cylinder in capacity units
 	 * @param service_pressure Service pressure of the cylinder
@@ -57,21 +69,42 @@ public class Cylinder implements Serializable {
 		mServicePressure = service_pressure;
 	}
 
+	/**
+	 * Set this Cylinder object's unique ID. This is typically used in
+	 * combination with an ORM library.
+	 * @param id The ID to assign
+	 */
 	public void setId(long id) {
 		this.id = id;
 	}
 
+	/**
+	 * Get this Cylinder object's unique ID. This is typically used in
+	 * combination with an ORM library.
+	 * @return The Cylinder's ID, or null if it does not have one
+	 */
 	public Long getId() {
 		return id;
 	}
 
+	/**
+	 * Get this Cylinder's assigned name.
+	 * @return The Cylinder's name
+	 */
 	public String getName() { return mName; }
+	/**
+	 * Set this Cylinder's name.
+	 * @param name The name to assign
+	 */
 	public Cylinder setName(String name) { mName = name; return this; }
 
 	/**
-	 * Build a Cylinder object with a capacity instead of an internal volume
-	 * @param capacity The volume of gas the cylinder's contents would occupy at
-	 * sea level pressure when the cylinder is filled to the service pressure
+	 * Build a Cylinder object with a nominal capacity instead of an
+	 * internal volume. This method uses the Van der Waals equation of
+	 * state to compute the correct internal volume.
+	 * @param units The Units object to assign to the Cylinder
+	 * @param capacity The nominal volume of the cylinder's contents
+	 * at sea level when the cylinder is filled to the service pressure
 	 * @param service_pressure Service pressure of the cylinder
 	 * @return A Cylinder object initialized with the given parameters
 	 */
@@ -80,40 +113,84 @@ public class Cylinder implements Serializable {
 		c.setVdwCapacity(capacity);
 		return c;
 	}
-	
+
+	/**
+	 * Build a Cylinder object with a nominal capacity instead of an
+	 * internal volume. This method uses the ideal gas equation of
+	 * state to compute the correct internal volume.
+	 * @param units The Units object to assign to the Cylinder
+	 * @param capacity The nominal volume of the cylinder's contents
+	 * at sea level when the cylinder is filled to the service pressure
+	 * @param service_pressure Service pressure of the cylinder
+	 * @return A Cylinder object initialized with the given parameters
+	 */
 	public static Cylinder fromCapacityIdeal(Units units, float capacity, int service_pressure) {
 		Cylinder c = new Cylinder(units, 0, service_pressure);
 		c.setIdealCapacity(capacity);
 		return c;
 	}
-	
+
+	/**
+	 * Get the {@link Units} object for this Cylinder.
+	 *
+	 * @return The Units object
+	 */
 	public Units getUnits() {
 		return mUnits;
 	}
 
-	/** Returns the air capacity of the cylinder(s)
-	 * @return The volume of gas the cylinder's contents would occupy at sea level
-	 * pressure when the cylinder is filled with air to the service pressure, in
+	/**
+	 * Get the air capacity of the Cylinder, computed with the Van der
+	 * Waals state equation.
+	 *
+	 * @return The nominal volume of the cylinder's contents at sea level
+	 * when the cylinder is filled with air to the service pressure, in
 	 * capacity units
 	 */
 	public float getVdwCapacity() {
-		return (float)getVdwCapacityAtPressure(mServicePressure, AIR);
+		return (float)getVdwCapacityAtPressure(mServicePressure, Mix.AIR);
 	}
 
+	/**
+	 * Get the air capacity of the Cylinder, computed with the ideal gas
+	 * state equation.
+	 *
+	 * @return The nominal volume of the cylinder's contents at sea level
+	 * when the cylinder is filled with air to the service pressure, in
+	 * capacity units
+	 */
 	public float getIdealCapacity() {
 		return (float)getIdealCapacityAtPressure(mServicePressure);
 	}
 
+	/**
+	 * Set the internal volume of the Cylinder based on a nominal capacity,
+	 * computed with the ideal gas state equation.
+	 *
+	 * @param capacity The desired nominal volume of the cylinder's
+	 * contents at sea level when the cylinder is filled with air to the
+	 * service pressure, in capacity units
+	 * @return The Cylinder object
+	 */
 	public Cylinder setIdealCapacity(float capacity) {
 		mInternalVolume = capacity * mUnits.pressureAtm() / mServicePressure;
 		return this;
 	}
 
+	/**
+	 * Set the internal volume of the Cylinder based on a nominal capacity,
+	 * computed with the Van der Waals state equation.
+	 *
+	 * @param capacity The desired nominal volume of the cylinder's
+	 * contents at sea level when the cylinder is filled with air to the
+	 * service pressure, in capacity units
+	 * @return The Cylinder object
+	 */
 	public Cylinder setVdwCapacity(float capacity) {
 		// TODO: at what temperature do the cylinder manufacturers
 		// determine tank capacity?
 
-		double RT = mUnits.absTempAbient() * mUnits.gasConstant();
+		double RT = mUnits.absTempAmbient() * mUnits.gasConstant();
 		// We know what n is because we were given capacity:
 		double n = mUnits.pressureAtm() * capacity / RT;
 
@@ -121,7 +198,7 @@ public class Cylinder implements Serializable {
 		// V = nv
 		// dV/dv = n
 		float uncertainty = new Float(0.1 / n).floatValue();
-		double v = vRoot(mServicePressure, AIR, mUnits.absTempAmbient(), uncertainty);
+		double v = vRoot(mServicePressure, Mix.AIR, mUnits.absTempAmbient(), uncertainty);
 		mInternalVolume = (float)(v * n);
 		return this;
 	}
@@ -139,6 +216,10 @@ public class Cylinder implements Serializable {
 		return this;
 	}
 
+	/**
+	 * Get the service pressure of this cylinder
+	 * @return The service pressure
+	 */
 	public int getServicePressure() {
 		return mServicePressure;
 	}
