@@ -35,14 +35,16 @@ public class Cylinder implements Serializable {
 	 * A constant for classifying a Cylinder object as "generic," meaning
 	 * that it represents a class of cylinders rather than a specific
 	 * physical one.
-	 * @see setType
+	 *
+	 * @see #setType(int)
 	 */
 	public static final int TYPE_GENERIC = 0;
 	/**
 	 * A constant for classifying a Cylinder object as "specific," meaning
 	 * that it is a specific physical cylinder with unique characteristics
 	 * like a serial number and inspection dates.
-	 * @see setType
+	 *
+	 * @see #setType(int)
 	 */
 	public static final int TYPE_SPECIFIC = 1;
 	
@@ -60,6 +62,7 @@ public class Cylinder implements Serializable {
 	 * returned from a tank data model which stores internal volumes and
 	 * service pressures (the metric way).
 	 *
+	 * @param units A Units object set to the desired measurement system
 	 * @param internal_volume Internal volume of the cylinder in capacity units
 	 * @param service_pressure Service pressure of the cylinder
 	 */
@@ -72,6 +75,7 @@ public class Cylinder implements Serializable {
 	/**
 	 * Set this Cylinder object's unique ID. This is typically used in
 	 * combination with an ORM library.
+	 *
 	 * @param id The ID to assign
 	 */
 	public void setId(long id) {
@@ -81,6 +85,7 @@ public class Cylinder implements Serializable {
 	/**
 	 * Get this Cylinder object's unique ID. This is typically used in
 	 * combination with an ORM library.
+	 *
 	 * @return The Cylinder's ID, or null if it does not have one
 	 */
 	public Long getId() {
@@ -89,6 +94,7 @@ public class Cylinder implements Serializable {
 
 	/**
 	 * Get this Cylinder's assigned name.
+	 *
 	 * @return The Cylinder's name
 	 */
 	public String getName() { return mName; }
@@ -102,7 +108,8 @@ public class Cylinder implements Serializable {
 	 * Build a Cylinder object with a nominal capacity instead of an
 	 * internal volume. This method uses the Van der Waals equation of
 	 * state to compute the correct internal volume.
-	 * @param units The Units object to assign to the Cylinder
+	 *
+	 * @param units A Units object set to the desired measurement system
 	 * @param capacity The nominal volume of the cylinder's contents
 	 * at sea level when the cylinder is filled to the service pressure
 	 * @param service_pressure Service pressure of the cylinder
@@ -118,7 +125,8 @@ public class Cylinder implements Serializable {
 	 * Build a Cylinder object with a nominal capacity instead of an
 	 * internal volume. This method uses the ideal gas equation of
 	 * state to compute the correct internal volume.
-	 * @param units The Units object to assign to the Cylinder
+	 *
+	 * @param units A Units object set to the desired measurement system
 	 * @param capacity The nominal volume of the cylinder's contents
 	 * at sea level when the cylinder is filled to the service pressure
 	 * @param service_pressure Service pressure of the cylinder
@@ -170,7 +178,7 @@ public class Cylinder implements Serializable {
 	 * @param capacity The desired nominal volume of the cylinder's
 	 * contents at sea level when the cylinder is filled with air to the
 	 * service pressure, in capacity units
-	 * @return The Cylinder object
+	 * @return This Cylinder object
 	 */
 	public Cylinder setIdealCapacity(float capacity) {
 		mInternalVolume = capacity * mUnits.pressureAtm() / mServicePressure;
@@ -184,7 +192,7 @@ public class Cylinder implements Serializable {
 	 * @param capacity The desired nominal volume of the cylinder's
 	 * contents at sea level when the cylinder is filled with air to the
 	 * service pressure, in capacity units
-	 * @return The Cylinder object
+	 * @return This Cylinder object
 	 */
 	public Cylinder setVdwCapacity(float capacity) {
 		// TODO: at what temperature do the cylinder manufacturers
@@ -204,94 +212,172 @@ public class Cylinder implements Serializable {
 	}
 
 	/**
-	 * Get the internal volume of this cylinder
+	 * Get the internal volume of this Cylinder
+	 *
 	 * @return The internal volume in capacity units
 	 */
 	public float getInternalVolume() {
 		return mInternalVolume;
 	}
 
+	/**
+	 * Set the internal volume of this Cylinder
+	 *
+	 * @param internal_volume The internal volume to apply
+	 * @return This Cylinder object
+	 */
 	public Cylinder setInternalVolume(float internal_volume) {
 		mInternalVolume = internal_volume;
 		return this;
 	}
 
 	/**
-	 * Get the service pressure of this cylinder
+	 * Get the service pressure of this Cylinder
+	 *
 	 * @return The service pressure
 	 */
 	public int getServicePressure() {
 		return mServicePressure;
 	}
 
+	/**
+	 * Set the service pressure of this Cylinder
+	 *
+	 * @param service_pressure The service pressure to apply
+	 * @return This Cylinder object
+	 */
 	public Cylinder setServicePressure(int service_pressure) {
 		mServicePressure = service_pressure;
 		return this;
 	}
 
+	/**
+	 * Set the type of cylinder object. A Cylinder can be either
+	 * {@link #TYPE_GENERIC generic}, meaning it is only meant to
+	 * be representative of a class of Cylinders of the same
+	 * characteristics, or {@link #TYPE_SPECIFIC specific}, meaning it
+	 * represents one physical Cylinder with unique features like a serial
+	 * number and test dates.
+	 *
+	 * @param type The type to assign. See the above constants.
+	 */
 	public void setType(int type) {
 		this.type = type;
 	}
 
+	/**
+	 * Get this Cylinder's {@link #setType(int) type}.
+	 *
+	 * @return The type as an int. Compare with the type constants to
+	 * interpret it.
+	 */
 	public int getType() {
 		return type;
 	}
 
-	public void setSerialNumber(String serialNumber) {
-		this.serialNumber = serialNumber;
+	/**
+	 * Set this Cyliner's serial number.
+	 *
+	 * @param serial_number The serial number to apply
+	 */
+	public void setSerialNumber(String serial_number) {
+		this.serialNumber = serial_number;
 	}
 
+	/**
+	 * Get this Cylinder's serial number.
+	 *
+	 * @return The serial number
+	 */
 	public String getSerialNumber() {
 		return serialNumber;
 	}
 
-	public void setLastHydro(Date lastHydro) {
-		this.lastHydro = lastHydro;
+	/**
+	 * Set this Cylinder's last hydro test date.
+	 *
+	 * @param last_hydro The date to apply
+	 */
+	public void setLastHydro(Date last_hydro) {
+		lastHydro = last_hydro;
 	}
 
+	/**
+	 * Get this Cylinder's last hydro test date.
+	 *
+	 * @return The hydro test date
+	 */
 	public Date getLastHydro() {
 		return lastHydro;
 	}
 
+	/**
+	 * Get this Cylinder's last visual inspection date.
+	 *
+	 * @return The last visual date
+	 */
 	public Date getLastVisual() {
 		return lastVisual;
 	}
 
-	public void setLastVisual(Date lastVisual) {
-		this.lastVisual = lastVisual;
+	/**
+	 * Set this Cylinder's last visual inspection date.
+	 *
+	 * @param last_visual The date to apply
+	 */
+	public void setLastVisual(Date last_visual) {
+		lastVisual = last_visual;
 	}
 
+	/**
+	 * Compute the nominal volume of gas this Cylinder holds at the
+	 * given pressure. This method uses the ideal gas law to compute the
+	 * result.
+	 *
+	 * @param pressure The pressure at which to determine capacity
+	 * @return The amount of gas, in capacity units
+	 */
 	public double getIdealCapacityAtPressure(double pressure) {
 		return mInternalVolume * pressure / (double)mUnits.pressureAtm();
 	}
 
+	/**
+	 * Compute the gas pressure in this Cylinder if it contained the given
+	 * nominal volume of gas. This method uses the ideal gas law to
+	 * compute the result.
+	 *
+	 * @param capacity The nominal volume at which to determine pressure
+	 * @return The pressure
+	 */
 	public double getIdealPressureAtCapacity(double capacity) {
 		return capacity * mUnits.pressureAtm() / mInternalVolume;
 	}
 
 	/**
-	 * Solves Van der Waals gas equation to get equivalent atmospheric volume at
-	 * a given pressure and ambient temperature
-	 * @param P The pressure of the gas in the cylinder
+	 * Compute the nominal volume of gas this Cylinder holds at the given
+	 * pressure, using the Van der Waals gas equation.
+	 *
+	 * @param pressure The pressure of the gas in the cylinder
 	 * @param mix The mix in the cylinder, needed to determine a and b constants.
 	 * @return The amount of gas in the cylinder to one decimal place
 	 */
-	public double getVdwCapacityAtPressure(double P, Mix m) {
-		return getVdwCapacityAtPressure(P, m, mUnits.absTempAmbient());
+	public double getVdwCapacityAtPressure(double pressure, Mix mix) {
+		return getVdwCapacityAtPressure(pressure, mix, mUnits.absTempAmbient());
 	}
 
 	/**
-	 * Solves Van der Waals gas equation to get equivalent atmospheric volume at
-	 * a given pressure and temperature
-	 * @param P The pressure of the gas in the cylinder
+	 * Compute the nominal volume of gas this Cylinder holds at the given
+	 * pressure, using the Van der Waals gas equation.
+	 *
+	 * @param pressure The pressure of the gas in the cylinder
 	 * @param mix The mix in the cylinder, needed to determine a and b constants.
-	 * @param T The absolute temperature
+	 * @param temperature The absolute temperature of the Cylinder
 	 * @return The amount of gas in the cylinder to one decimal place
 	 */
-	public double getVdwCapacityAtPressure(double P, Mix mix, float T) {
-		// First, the trivial solution. This will cause a divide by 0 if we try to
-		// solve.
-		if(P == 0) {
+	public double getVdwCapacityAtPressure(double pressure, Mix mix, float temperature) {
+		// First, the trivial solution. This will cause a divide by 0
+		// if we try to solve.
+		if(pressure == 0) {
 			return 0;
 		}
 		// First-order uncertainty propagation. This lets us know
@@ -311,9 +397,9 @@ public class Cylinder implements Serializable {
 		// close enough for estimating uncertainty.
 		// v0 = RT / P
 		// so deltav < P_a * R * T / (20 * P^2 * V)
-		float RT = mUnits.gasConstant() * T,
-		      uncertainty = new Float(mUnits.pressureAtm() * RT / (20 * P * P * mInternalVolume)).floatValue();
-		double v = vRoot(P, mix, T, uncertainty);
+		float RT = mUnits.gasConstant() * temperature,
+		      uncertainty = new Float(mUnits.pressureAtm() * RT / (20 * pressure * pressure * mInternalVolume)).floatValue();
+		double v = vRoot(pressure, mix, temperature, uncertainty);
 		return mInternalVolume * RT / (mUnits.pressureAtm() * v);
 	}
 
@@ -342,48 +428,113 @@ public class Cylinder implements Serializable {
 		return v1;
 	}
 
+	/**
+	 * Compute the gas pressure in this Cylinder if it contained the given
+	 * nominal volume of gas, using the Van der Waals gas equation.
+	 *
+	 * @param capacity The nominal volume at which to determine pressure
+	 * @param mix The gas in the Cylinder
+	 * @return The pressure
+	 */
 	public double getVdwPressureAtCapacity(double capacity, Mix mix) {
 		return getVdwPressureAtCapacity(capacity, mix, mUnits.absTempAmbient());
 	}
 
-	public double getVdwPressureAtCapacity(double capacity, Mix mix, float T) {
+	/**
+	 * Compute the gas pressure in this Cylinder if it contained the given
+	 * nominal volume of gas, using the Van der Waals gas equation.
+	 *
+	 * @param capacity The nominal volume at which to determine pressure
+	 * @param mix The gas in the Cylinder
+	 * @param temperature The absolute temperature of the Cylinder
+	 * @return The pressure
+	 */
+	public double getVdwPressureAtCapacity(double capacity, Mix mix, float temperature) {
 		// This is given by the following:
 		// choose a reasonable value for T
 		// n = Patm*V/(R*T) (since volume is at atmospheric pressure, it's close enough to ideal)
 		// v = V/n
 		// P = R * T / (v - b) - a / v^2
-		double RT = T * mUnits.gasConstant();
+		double RT = temperature * mUnits.gasConstant();
 		double v = mInternalVolume * RT / (mUnits.pressureAtm() * capacity),
 				a = mUnits.convertA(mix.getA(), Units.METRIC), b = mUnits.convertCapacity(mix.getB(), Units.METRIC);
 		return RT / (v - b) - a / (v * v);
 	}
 
+	/**
+	 * Set the default number of years between hydro tests for all
+	 * cylinders. This can be overridden on individual Cylinder objects
+	 * with {@link #setHydroInterval(Integer)}.
+	 *
+	 * @param years The number of years allowed between hydro tests
+	 */
 	public static void setDefHydroInterval(int years) {
 		defHydroIntervalYears = years;
 	}
 
+	/**
+	 * Set the default number of years between visual inspections for all
+	 * cylinders. This can be overridden on individual Cylinder objects
+	 * with {@link #setVisualInterval(Integer)}.
+	 *
+	 * @param months The number of months allowed between visual
+	 * inspections
+	 */
 	public static void setDefVisualInterval(int months) {
 		defVisualIntervalMonths = months;
 	}
 
+	/**
+	 * Set the allowed number of years between hydro tests for this
+	 * Cylinder.
+	 *
+	 * @param years The number of years allowed between hydro tests
+	 */
 	public void setHydroInterval(Integer years) {
 		hydroIntervalYears = years;
 	}
 
+	/**
+	 * Get the allowed number of years between hydro tests for this
+	 * Cylinder.
+	 *
+	 * @return The number of years allowed between hydro tests
+	 */
 	public Integer getHydroInterval() {
 		return hydroIntervalYears;
 	}
 
+	/**
+	 * Set the allowed number of months between visual inspections for
+	 * this Cylinder.
+	 *
+	 * @param months The number of months allowed between visual
+	 * inspections
+	 */
 	public void setVisualInterval(Integer months) {
 		visualIntervalMonths = months;
 	}
 
+	/**
+	 * Get the allowed number of months between visual inspections for
+	 * this Cylinder.
+	 *
+	 * @return The number of months allowed between visual inspections
+	 */
 	public Integer getVisualInterval() {
 		return visualIntervalMonths;
 	}
 
-	// For testing, makes the expiration methods pretend the Date is
-	// date rather than the current time.
+	/**
+	 * Override the date used to check if hydro or visual tests have
+	 * expired or are about to expire. By default,
+	 * {@link #isHydroExpired()}, {@link #doesHydroExpireThisMonth()},
+	 * etc. use the current date/time to reach their results. This
+	 * method allows running these methods against some other date,
+	 * mainly for testing purposes.
+	 *
+	 * @param date The date relative to which all Cylinder tests run
+	 */
 	public static void setTestDate(Date date) {
 		testDate = date;
 	}
@@ -412,6 +563,13 @@ public class Cylinder implements Serializable {
 		return l;
 	}
 
+	/**
+	 * Check if this Cylinder's {@link #setLastHydro(Date) last hydro test}
+	 * has expired.
+	 *
+	 * @return True if the last hydro is set and has expired, false
+	 * otherwise
+	 */
 	public boolean isHydroExpired() {
 		if(lastHydro == null) {
 			return false;
@@ -423,6 +581,13 @@ public class Cylinder implements Serializable {
 		return now().after(cal.getTime());
 	}
 
+	/**
+	 * Check if this Cylinder's
+	 * {@link #setLastVisual(Date) last visual inspection} has expired.
+	 *
+	 * @return True if the last visual is set and has expired, false
+	 * otherwise
+	 */
 	public boolean isVisualExpired() {
 		if(lastVisual == null) {
 			return false;
@@ -434,6 +599,13 @@ public class Cylinder implements Serializable {
 		return now().after(cal.getTime());
 	}
 
+	/**
+	 * Check if this Cylinder's {@link #setLastHydro(Date) last hydro test}
+	 * expires this month.
+	 *
+	 * @return True if the last hydro is set and expires this month, false
+	 * otherwise
+	 */
 	public boolean doesHydroExpireThisMonth() {
 		if(lastHydro == null) {
 			return false;
@@ -453,6 +625,14 @@ public class Cylinder implements Serializable {
 		return now.after(lastMonth.getTime()) && now.before(firstExpiredMonth.getTime());
 	}
 
+	/**
+	 * Check if this Cylinder's
+	 * {@link #setLastVisual(Date) last visual inspection} expires this
+	 * month.
+	 *
+	 * @return True if the last visual is set and expires this month,
+	 * false otherwise
+	 */
 	public boolean doesVisualExpireThisMonth() {
 		if(lastVisual == null) {
 			return false;

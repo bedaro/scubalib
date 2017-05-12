@@ -77,7 +77,7 @@ public class Mix extends GasSource {
 	 * Create a gas mix of the given fractions of oxygen and helium.
 	 * <p>
 	 * Passing arguments that would produce an impossible gas will result
-	 * in a MixException.
+	 * in a {@link MixException}.
 	 * @param o2 The fraction of oxygen
 	 * @param he The fraction of helium
 	 */
@@ -182,7 +182,9 @@ public class Mix extends GasSource {
 	}
 	
 	/**
-	 *  Return the Maximum Operating Depth of this mix.
+	 * Return the Maximum Operating Depth of this mix.
+	 * @param units A Units object set to the desired measurement
+	 * system for the result
 	 * @param maxpO2 The maximum desired partial pressure of oxygen (usually 1.4 or 1.6)
 	 * @return The maximum operating depth in the current system of units, rounded down to the nearest standard depth increment
 	 */
@@ -194,7 +196,7 @@ public class Mix extends GasSource {
 	 * Get the minimum depth at which this mix may be breathed.
 	 * @param minpO2 The minimum desired pO2 to have when breathing this
 	 * mix, in ata (usually .16 or .17)
-	 * @param units A {@link Units} object set to the desired measurement
+	 * @param units A Units object set to the desired measurement
 	 * system for the result
 	 * @return The minimum depth in the given units, rounded up to the nearest standard increment
 	 */
@@ -211,7 +213,7 @@ public class Mix extends GasSource {
 	 * system of units
 	 * @param maxEND The desired END. If you don't want a helium mix, pass
 	 * the same value for mod and end.
-	 * @param units A {@link Units} object set to the desired measurement
+	 * @param units A Units object set to the desired measurement
 	 * system for the result
 	 * @param maxpO2 The maximum desired partial pressure of oxygen in ata
 	 * (usually 1.4 or 1.6)
@@ -298,7 +300,7 @@ public class Mix extends GasSource {
 	/**
 	 * Thrown when a Mix is instantiated or modified in an impossible way
 	 */
-	public class MixException extends RuntimeException {
+	public static class MixException extends RuntimeException {
 
 		public MixException(String message) {
 			super(message);

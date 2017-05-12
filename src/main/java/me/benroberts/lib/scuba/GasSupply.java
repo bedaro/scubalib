@@ -30,7 +30,7 @@ public class GasSupply implements Cloneable {
 	 * Create a new, empty gas source for a given Cylinder. The constructor
 	 * selects an air Mix, the Van der Waals equation of state, and a
 	 * typical temperature.
-	 * @param cylinder The {@link Cylinder} object to use for this supply
+	 * @param cylinder The Cylinder object to use for this supply
 	 */
 	public GasSupply(Cylinder cylinder) {
 		this(cylinder, Mix.AIR, 0);
@@ -40,8 +40,8 @@ public class GasSupply implements Cloneable {
 	 * Create a new gas source from a Cylinder, an initial Mix, and a
 	 * starting pressure. The constructor selects the Van der Waals
 	 * equation of state and a typical temperature.
-	 * @param cylinder The {@link Cylinder} object to use for this supply
-	 * @param mix The initial {@link Mix} in this supply
+	 * @param cylinder The Cylinder object to use for this supply
+	 * @param mix The initial Mix in this supply
 	 * @param pressure The initial pressure of the contents, in
 	 * the same units that were used for the Cylinder object
 	 */
@@ -53,8 +53,8 @@ public class GasSupply implements Cloneable {
 	 * Create a new gas source from a Cylinder, an initial Mix, and a
 	 * starting pressure, while also specifying the state equation to use
 	 * for later computations.
-	 * @param cylinder The {@link Cylinder} object to use for this supply
-	 * @param mix The initial {@link Mix} in this supply
+	 * @param cylinder The Cylinder object to use for this supply
+	 * @param mix The initial Mix in this supply
 	 * @param pressure The initial pressure of the cylinder's content, in
 	 * the same units that were used for the Cylinder object
 	 * @param state Pass one of the STATE_* global constants to pick one
@@ -67,8 +67,8 @@ public class GasSupply implements Cloneable {
 	 * Create a new gas source from a Cylinder, an initial Mix, a
 	 * starting pressure, and temperature, while also specifying the state
 	 * equation to use for later computations.
-	 * @param cylinder The {@link Cylinder} object to use for this supply
-	 * @param mix The initial {@link Mix} in this supply
+	 * @param cylinder The Cylinder object to use for this supply
+	 * @param mix The initial Mix in this supply
 	 * @param pressure The initial pressure of the Cylinder's content, in
 	 * the same units that were used for the Cylinder object
 	 * @param state Pass one of the STATE_* global constants to pick one
@@ -120,7 +120,7 @@ public class GasSupply implements Cloneable {
 	}
 
 	/**
-	 * Get the {@link Mix} contained in this supply.
+	 * Get the Mix contained in this supply.
 	 * @return The supply's Mix
 	 */
 	public Mix getMix() {
@@ -130,14 +130,14 @@ public class GasSupply implements Cloneable {
 	/**
 	 * Set the Mix contained in this supply. No computations are done,
 	 * rather the old Mix is simply replaced.
-	 * @param mix The {@link Mix} to set this supply's contents to
+	 * @param mix The Mix to set this supply's contents to
 	 */
 	public void setMix(Mix mix) {
 		mMix = mix;
 	}
 
 	/**
-	 * Get the {@link Cylinder} that this supply is using.
+	 * Get the Cylinder that this supply is using.
 	 * @return The Cylinder object
 	 */
 	public Cylinder getCylinder() {
@@ -147,7 +147,7 @@ public class GasSupply implements Cloneable {
 	/**
 	 * Set the Cylinder to use for this supply. No computations are done,
 	 * rather the old Cylinder is simply replaced.
-	 * @param cylinder The {@link Cylinder} object to use
+	 * @param cylinder The Cylinder object to use
 	 */
 	public void setCylinder(Cylinder cylinder) {
 		mCylinder = cylinder;
@@ -289,7 +289,7 @@ public class GasSupply implements Cloneable {
 	 * Add a given nominal volume of oxygen.
 	 * @param o2_amount The amount of oxygen to add, in capacity units
 	 * @return This object
-	 * @see addGas
+	 * @see #addGas(Mix, double)
 	 */
 	public GasSupply addO2(double o2_amount) {
 		return addGas(new Mix(1, 0), o2_amount);
@@ -299,7 +299,7 @@ public class GasSupply implements Cloneable {
 	 * Add a given nominal volume of helium.
 	 * @param he_amount The amount of helium to add, in capacity units
 	 * @return This object
-	 * @see addGas
+	 * @see #addGas(Mix, double)
 	 */
 	public GasSupply addHe(double he_amount) {
 		return addGas(new Mix(0, 1), he_amount);
@@ -308,7 +308,7 @@ public class GasSupply implements Cloneable {
 	/**
 	 * Add a given nominal volume of a Mix. This method updates the Mix
 	 * and pressure according to this supply's current contents.
-	 * @param mix The {@link Mix} to add
+	 * @param mix The Mix to add
 	 * @param amount The amount of gas to add, in capacity units
 	 * @return This object
 	 */
@@ -330,7 +330,7 @@ public class GasSupply implements Cloneable {
 	 * Add a gas to the current contents of this supply until reaching a
 	 * given pressure. This method updates the Mix according to this
 	 * supply's current contents, and updates the pressure.
-	 * @param mix The {@link Mix} to add
+	 * @param mix The Mix to add
 	 * @param final_pressure The final pressure for this supply
 	 * @return This object.
 	 */
