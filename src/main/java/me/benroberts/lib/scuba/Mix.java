@@ -241,19 +241,16 @@ public class Mix extends GasSource {
 			return null;
 		}
 	}
-	
+
 	// Internal variables used for caching the computed a and b values for
 	// this mix
-	private float mCacheA = 0, mCacheB = 0;
-	private double mCacheHe = -1, mCacheO2 = -1;
-	
+	private float mCacheA = -1, mCacheB = -1;
+
 	// This private method does our a and b calculations and caches the
 	// results in private variables. This way the computation only has to
 	// be done once on a given mix.
 	// See Kwak and Mansoori, 1985 http://trl.lab.uic.edu/KwakvdwMRs.pdf
 	private void computeAB() {
-		mCacheO2 = mO2;
-		mCacheHe = mHe;
 		double x[] = { mO2, getfN2(), mHe };
 		float a[] = { A_OXYGEN, A_NITROGEN, A_HELIUM };
 		float b[] = { B_OXYGEN, B_NITROGEN, B_HELIUM };
@@ -280,7 +277,7 @@ public class Mix extends GasSource {
 	 * @return The value of a, in bar L^2 / mol^2.
 	 */
 	public float getA() {
-		if(mO2 != mCacheO2 || mHe != mCacheHe) {
+		if(mCacheA == -1) {
 			computeAB();
 		}
 		return mCacheA;
@@ -292,7 +289,7 @@ public class Mix extends GasSource {
 	 * @return The value of b, in L / mol.
 	 */
 	public float getB() {
-		if(mO2 != mCacheO2 || mHe != mCacheHe) {
+		if(mCacheB == -1) {
 			computeAB();
 		}
 		return mCacheB;
